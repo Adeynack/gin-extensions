@@ -18,6 +18,18 @@
   version = "v1.2"
 
 [[projects]]
+  name = "github.com/go-http-utils/headers"
+  packages = ["."]
+  revision = "dd89efed167473dab56959bdfdbfdfed9519f80b"
+  version = "1.0.0"
+
+[[projects]]
+  name = "github.com/go-http-utils/negotiator"
+  packages = ["."]
+  revision = "dba3794a997e423e032796131331cce008c3a427"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
@@ -56,6 +68,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1a2b10f3ec80fa4b6ad88156b737403ca45820640ec668e0b797538b6274d305"
+  inputs-digest = "e81fdf85f3f105e6d98913ec3007a75488c60e04d6d416721fd584afb179550f"
   solver-name = "gps-cdcl"
   solver-version = 1
