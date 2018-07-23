@@ -4,15 +4,26 @@ import (
     "github.com/gin-gonic/gin"
     "github.com/go-http-utils/negotiator"
     "log"
+    "net/http"
 )
 
 type Exchange interface {
+
+    // Gets the Gin context.
     Context() *gin.Context
+
+    // Gets the Negotiator for this exchange.
     Negotiator() *negotiator.Negotiator
-    ConsumedType() string
-    ProducedType() string
-    Bind(requestBody interface{}) (err error)
-    AutoBind(requestBody interface{}) (handled bool)
+
+    // Gets the list of types accepted in the request.
+    ConsumedType() string // todo: Used?
+
+    // Gets the list of types accepted for the response.
+    ProducedType() string // todo: Used?
+
+    // Bind the request's body to a struct.
+    // When it fails, returns a `Problem` with a 400 BAD REQUEST status code.
+    Bind(requestBody interface{}) error
 }
 
 type exchange struct {
@@ -41,15 +52,14 @@ func (xc *exchange) ProducedType() string {
     return xc.producedType
 }
 
-func (xc *exchange) Bind(requestBody interface{}) (err error) {
-    return xc.materializer.ReadRequestBody(xc, requestBody)
-}
-
-func (xc *exchange) AutoBind(requestBody interface{}) (handled bool) {
-    if err := xc.Bind(requestBody); err != nil {
+func (xc *exchange) Bind(requestBody interface{}) error {
+    if err := xc.materializer.ReadRequestBody(xc, requestBody); err != nil {
         log.Printf("Unable to bind request body: %v", err)
-        answerWithProblem(xc.Context(), err)
-        handled = true
+        return &Problem{
+            Status: http.StatusBadRequest,
+            Title: "Request body could not be parsed.",
+            Cause: err,
+        }
     }
-    return
+    return nil
 }

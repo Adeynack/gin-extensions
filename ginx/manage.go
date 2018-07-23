@@ -9,10 +9,24 @@ import (
     "log"
 )
 
+type Conclusion struct {
+   Status       int
+   ResponseBody interface{}
+}
+
+/*
 type Conclusion interface {
+
+    // Gets any reason why this exchange could not complete (`nil` if successful).
+    Error() error
+
+    // Gets the resulting HTTP status code.
     Status() int
+
+    // Gets the object to be serialized as the response's body.
     ResponseBody() interface{}
 }
+*/
 
 // Function managing the exchange.
 //
@@ -24,7 +38,14 @@ type Conclusion interface {
 // If both error and conclusion are nil, it will be assumed that the request
 // was manually handled inside of the manager and nothing needs to be performed.
 //
-type Handler = func(Exchange) (Conclusion, error)
+type HandlerFunc = func(Exchange) (*Conclusion, error)
+
+// Generates a Gin `HandlerFunc` from a content materializer.
+func Handler(materializer ContentMaterializer, handler HandlerFunc) gin.HandlerFunc {
+    return func(ctx *gin.Context) {
+        Handle(ctx, materializer, handler)
+    }
+}
 
 // Handles a `gin.Context` the `ginx` way.
 //
@@ -32,31 +53,43 @@ type Handler = func(Exchange) (Conclusion, error)
 // materializer     The logic of deserializing request and serializing response.
 // handler          The function handling the exchange and returning either an
 //                  exchange `Conclusion` or an error.
-func Handle(ctx *gin.Context, materializer ContentMaterializer, handler Handler) {
+func Handle(ctx *gin.Context, materializer ContentMaterializer, handler HandlerFunc) {
+    nego := negotiator.New(ctx.Request.Header)
     exchange := &exchange{
         context:    ctx,
-        negotiator: negotiator.New(ctx.Request.Header),
+        negotiator: nego,
+        materializer: materializer,
     }
-    //
-    // Ensure request's content type is supported.
-    //
+    if ok := ensureRequestContentTypeIsSupported(ctx, exchange, materializer); !ok {
+        return
+    }
+    if ok := ensureAcceptedResponseTypeIsSupported(ctx, exchange, materializer); !ok {
+        return
+    }
+    handleExchangeAndWriteResponse(ctx, exchange, materializer, handler)
+}
+
+// Ensure request's content type is supported.
+func ensureRequestContentTypeIsSupported(ctx *gin.Context, exchange Exchange, materializer ContentMaterializer) bool {
     acceptedConsumedType := ""
     contentType := ctx.GetHeader(headers.ContentType)
     if contentType != "" {
-        // if a `accept` header is provided, it needs to be supported by the negotiator.
-        acceptedConsumedType = exchange.Negotiator().Type(materializer.ProducedTypes()...)
+        // if a `content-type` header is provided, it needs to be supported by the negotiator.
+        acceptedConsumedType = exchange.Negotiator().Type(materializer.ConsumedTypes()...)
         if acceptedConsumedType == "" {
             answerWithProblem(ctx, Problem{
-                Status: http.StatusNotAcceptable,
+                Status: http.StatusUnsupportedMediaType,
                 Title:  fmt.Sprintf("The request type is not supported (header `%s`)", headers.ContentType),
                 Detail: fmt.Sprintf("A request of type `%s` is not supported.", contentType),
             })
-            return
+            return false
         }
     }
-    //
-    // Ensure accepted type (response type) is supported.
-    //
+    return true
+}
+
+// Ensure accepted type (response type) is supported.
+func ensureAcceptedResponseTypeIsSupported(ctx *gin.Context, exchange Exchange, materializer ContentMaterializer) bool {
     acceptedProducedType := ""
     accept := ctx.GetHeader(headers.Accept)
     if accept != "" {
@@ -68,17 +101,24 @@ func Handle(ctx *gin.Context, materializer ContentMaterializer, handler Handler)
                 Title:  fmt.Sprintf("The accepted types are not supported (header `%s`)", headers.Accept),
                 Detail: fmt.Sprintf("A request that accepts type(s) `%s` is not supported.", accept),
             })
-            return
+            return false
         }
     }
-    //
-    // Handle the exchange (call client code) and write the response.
-    //
+    return true
+}
+
+// Handle the exchange (call client code) and write the response.
+func handleExchangeAndWriteResponse(ctx *gin.Context, exchange Exchange, materializer ContentMaterializer, handler HandlerFunc) {
     conclusion, err := handler(exchange)
     if err != nil {
         answerWithProblem(ctx, err)
         return
     }
+    if conclusion == nil {
+        // NOOP. The exchange was managed within the handler.
+        return
+    }
+    // Write the conclusion to the response.
     materializer.WriteResponseBody(exchange, conclusion)
 }
 

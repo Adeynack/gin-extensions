@@ -11,6 +11,7 @@ type Problem struct {
     Title    string `json:"title"`
     Detail   string `json:"detail"`
     Instance string `json:"instance"`
+    Cause    error  `json:"-"` // for debugging purposes only, never serialize with the JSON output
 }
 
 var _ fmt.Stringer = &Problem{}
@@ -25,5 +26,9 @@ func (p Problem) String() string {
 }
 
 func (p Problem) Error() string {
-    return p.String()
+    if p.Cause == nil {
+        return p.String()
+    } else {
+        return fmt.Sprintf("%s caused by: %s", p.String(), p.Error())
+    }
 }
