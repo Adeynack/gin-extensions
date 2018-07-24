@@ -7,13 +7,15 @@ import (
     "net/http"
     "fmt"
     "log"
+    "strings"
 )
 
 type Conclusion struct {
-   Status       int
-   ResponseBody interface{}
+    Status       int
+    ResponseBody interface{}
 }
 
+// todo: Try `Conclusion` as an interface instead...
 /*
 type Conclusion interface {
 
@@ -56,8 +58,8 @@ func Handler(materializer ContentMaterializer, handler HandlerFunc) gin.HandlerF
 func Handle(ctx *gin.Context, materializer ContentMaterializer, handler HandlerFunc) {
     nego := negotiator.New(ctx.Request.Header)
     exchange := &exchange{
-        context:    ctx,
-        negotiator: nego,
+        context:      ctx,
+        negotiator:   nego,
         materializer: materializer,
     }
     if ok := ensureRequestContentTypeIsSupported(ctx, exchange, materializer); !ok {
@@ -70,22 +72,74 @@ func Handle(ctx *gin.Context, materializer ContentMaterializer, handler HandlerF
 }
 
 // Ensure request's content type is supported.
-func ensureRequestContentTypeIsSupported(ctx *gin.Context, exchange Exchange, materializer ContentMaterializer) bool {
+func ensureRequestContentTypeIsSupported(ctx *gin.Context, exchange *exchange, materializer ContentMaterializer) bool {
     acceptedConsumedType := ""
     contentType := ctx.GetHeader(headers.ContentType)
-    if contentType != "" {
-        // if a `content-type` header is provided, it needs to be supported by the negotiator.
-        acceptedConsumedType = exchange.Negotiator().Type(materializer.ConsumedTypes()...)
-        if acceptedConsumedType == "" {
-            answerWithProblem(ctx, Problem{
-                Status: http.StatusUnsupportedMediaType,
-                Title:  fmt.Sprintf("The request type is not supported (header `%s`)", headers.ContentType),
-                Detail: fmt.Sprintf("A request of type `%s` is not supported.", contentType),
-            })
-            return false
+    if contentType == "" {
+        exchange.consumedType = materializer.ConsumedTypes()[0]
+        return true
+    }
+
+    // a `content-type` header is provided, it needs to be supported by the negotiator.
+    acceptedConsumedType = findFirstSupportedMediaType(contentType, materializer.ConsumedTypes())
+    if acceptedConsumedType != "" {
+        exchange.consumedType = acceptedConsumedType
+        return true
+    }
+
+    answerWithProblem(ctx, Problem{
+        Status: http.StatusNotAcceptable,
+        Title:  fmt.Sprintf("The request type is not supported (header '%s')", headers.ContentType),
+        Detail: fmt.Sprintf("A request of type '%s' is not supported.", contentType),
+    })
+    return false
+}
+
+func findFirstSupportedMediaType(contentType string, accepted []string) string {
+    requestedMediaType := parseMediaType(contentType)
+    if requestedMediaType == nil {
+        return ""
+    }
+    if requestedMediaType.Type == "*" && requestedMediaType.Subtype == "*" {
+        return accepted[0]
+    }
+    for _, a := range accepted {
+        acceptedMediaType := parseMediaType(a)
+        typeIsCompatible := (acceptedMediaType.Type == requestedMediaType.Type) ||
+            acceptedMediaType.Type == "*" ||
+            requestedMediaType.Type == "*"
+        subTypeIsCompatible := (acceptedMediaType.Subtype == requestedMediaType.Subtype) ||
+            acceptedMediaType.Subtype == "*" ||
+            requestedMediaType.Subtype == "*"
+        if typeIsCompatible && subTypeIsCompatible {
+            return a
         }
     }
-    return true
+    return ""
+}
+
+type MediaType struct {
+    Type       string
+    Subtype    string
+    Parameters string
+}
+
+func parseMediaType(source string) *MediaType {
+    if source == "" {
+        return nil
+    }
+    result := MediaType{}
+    sourceParts := strings.SplitN(source, ";", 2)
+    if len(sourceParts) > 1 {
+        result.Parameters = sourceParts[1]
+    }
+    mediaTypeParts := strings.Split(sourceParts[0], "/")
+    if len(mediaTypeParts) != 2 {
+        return nil
+    }
+    result.Type = mediaTypeParts[0]
+    result.Subtype = mediaTypeParts[1]
+    return &result
 }
 
 // Ensure accepted type (response type) is supported.
@@ -97,9 +151,9 @@ func ensureAcceptedResponseTypeIsSupported(ctx *gin.Context, exchange Exchange, 
         acceptedProducedType = exchange.Negotiator().Type(materializer.ProducedTypes()...)
         if acceptedProducedType == "" {
             answerWithProblem(ctx, Problem{
-                Status: http.StatusNotAcceptable,
-                Title:  fmt.Sprintf("The accepted types are not supported (header `%s`)", headers.Accept),
-                Detail: fmt.Sprintf("A request that accepts type(s) `%s` is not supported.", accept),
+                Status: http.StatusUnsupportedMediaType,
+                Title:  fmt.Sprintf("The accepted types are not supported (header '%s')", headers.Accept),
+                Detail: fmt.Sprintf("A request that accepts type(s) '%s' is not supported.", accept),
             })
             return false
         }

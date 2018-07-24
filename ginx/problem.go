@@ -7,10 +7,10 @@ import (
 
 type Problem struct {
     Status   int    `json:"status"`
-    Type     string `json:"type"`
-    Title    string `json:"title"`
-    Detail   string `json:"detail"`
-    Instance string `json:"instance"`
+    Type     string `json:"type,omitempty"`
+    Title    string `json:"title,omitempty"`
+    Detail   string `json:"detail,omitempty"`
+    Instance string `json:"instance,omitempty"`
     Cause    error  `json:"-"` // for debugging purposes only, never serialize with the JSON output
 }
 
