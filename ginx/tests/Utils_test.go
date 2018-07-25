@@ -1,8 +1,9 @@
 package tests
 
 import (
-    "testing"
     "net/http/httptest"
+    "testing"
+
     "github.com/gin-gonic/gin"
 )
 

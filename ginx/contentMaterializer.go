@@ -6,7 +6,6 @@ package ginx
 // Example: JSON
 //
 type ContentMaterializer interface {
-
     ExchangeHandler
 
     // Gets the list of media types that can be deserialized from the request.

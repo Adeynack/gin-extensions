@@ -1,14 +1,14 @@
 package ginx
 
 import (
-    "github.com/gin-gonic/gin"
-    "github.com/go-http-utils/negotiator"
     "log"
     "net/http"
+
+    "github.com/gin-gonic/gin"
+    "github.com/go-http-utils/negotiator"
 )
 
 type Exchange interface {
-
     // Gets the Gin context.
     Context() *gin.Context
 
@@ -57,8 +57,8 @@ func (xc *exchange) Bind(requestBody interface{}) error {
         log.Printf("Unable to bind request body: %v", err)
         return &Problem{
             Status: http.StatusBadRequest,
-            Title: "Request body could not be parsed.",
-            Cause: err,
+            Title:  "Request body could not be parsed.",
+            Cause:  err,
         }
     }
     return nil

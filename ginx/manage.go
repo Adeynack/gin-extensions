@@ -1,13 +1,14 @@
 package ginx
 
 import (
-    "github.com/gin-gonic/gin"
-    "github.com/go-http-utils/negotiator"
-    "github.com/go-http-utils/headers"
-    "net/http"
     "fmt"
     "log"
+    "net/http"
     "strings"
+
+    "github.com/gin-gonic/gin"
+    "github.com/go-http-utils/headers"
+    "github.com/go-http-utils/negotiator"
 )
 
 type Conclusion struct {

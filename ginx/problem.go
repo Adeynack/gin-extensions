@@ -1,8 +1,8 @@
 package ginx
 
 import (
-    "fmt"
     "encoding/json"
+    "fmt"
 )
 
 type Problem struct {

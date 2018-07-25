@@ -1,15 +1,16 @@
 package tests
 
 import (
-    "testing"
-    "net/http/httptest"
-    "github.com/gin-gonic/gin"
-    "github.com/adeynack/gin-extensions/ginx/materializer"
     "net/http"
-    "github.com/adeynack/gin-extensions/ginx"
-    "github.com/stretchr/testify/assert"
+    "net/http/httptest"
     "strings"
+    "testing"
+
+    "github.com/adeynack/gin-extensions/ginx"
+    "github.com/adeynack/gin-extensions/ginx/materializer"
+    "github.com/gin-gonic/gin"
     "github.com/go-http-utils/headers"
+    "github.com/stretchr/testify/assert"
 )
 
 // GET request with a response body to serialize (no request body), `Accept` header not provided

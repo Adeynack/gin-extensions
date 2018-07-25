@@ -1,9 +1,10 @@
 package materializer
 
 import (
-    "github.com/adeynack/gin-extensions/ginx"
     "encoding/json"
     "io/ioutil"
+
+    "github.com/adeynack/gin-extensions/ginx"
     "github.com/gin-gonic/gin"
 )
 
