@@ -22,7 +22,7 @@ func (m *JsonContentMaterializer) Handle(ctx *gin.Context, handler ginx.HandlerF
 }
 
 func (m *JsonContentMaterializer) ConsumedTypes() []string {
-    return consumedTypes
+    return jsonConsumedTypes
 }
 
 func (m *JsonContentMaterializer) ReadRequestBody(exchange ginx.Exchange, requestBody interface{}) (err error) {
@@ -35,7 +35,7 @@ func (m *JsonContentMaterializer) ReadRequestBody(exchange ginx.Exchange, reques
 }
 
 func (m *JsonContentMaterializer) ProducedTypes() []string {
-    return producedTypes
+    return jsonProducedTypes
 }
 
 func (m *JsonContentMaterializer) WriteResponseBody(exchange ginx.Exchange, conclusion *ginx.Conclusion) (err error) {
@@ -48,10 +48,10 @@ func (m *JsonContentMaterializer) WriteResponseBody(exchange ginx.Exchange, conc
     } else {
         responseJsonBytes = []byte{}
     }
-    exchange.Context().Data(conclusion.Status, producedTypes[0], responseJsonBytes)
+    exchange.Context().Data(conclusion.Status, jsonProducedTypes[0], responseJsonBytes)
     return nil
 }
 
-var consumedTypes = []string{"*/json"}
+var jsonConsumedTypes = []string{"*/json"}
 
-var producedTypes = []string{"application/json"}
+var jsonProducedTypes = []string{"application/json"}
